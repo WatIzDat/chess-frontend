@@ -1,6 +1,7 @@
 "use client";
 
 import { queueMatchmaking } from "@/lib/actions";
+import { getAccessToken } from "@/lib/util";
 
 export default function QuickPlayList() {
     return (
@@ -16,8 +17,12 @@ export default function QuickPlayList() {
                 <button
                     key={`${timeControl[0]} | ${timeControl[1]}`}
                     className="size-full bg-white rounded-4xl text-3xl"
-                    onClick={() =>
-                        queueMatchmaking(timeControl[0] * 60, timeControl[1])
+                    onClick={async () =>
+                        queueMatchmaking(
+                            await getAccessToken(),
+                            timeControl[0] * 60,
+                            timeControl[1]
+                        )
                     }
                 >
                     {`${timeControl[0]} | ${timeControl[1]}`}

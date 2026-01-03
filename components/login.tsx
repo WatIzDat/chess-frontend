@@ -13,12 +13,11 @@ export default function Login() {
 
     useEffect(() => {
         if (state?.success) {
-            console.log(state.data.accessToken);
             localStorage.setItem("accessToken", state.data.accessToken);
             localStorage.setItem("refreshToken", state.data.refreshToken);
             localStorage.setItem(
                 "tokenExpirationDate",
-                DateTime.now()
+                DateTime.utc()
                     .plus({ seconds: state.data.expiresIn })
                     .toMillis()
                     .toString()
