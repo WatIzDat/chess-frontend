@@ -47,3 +47,9 @@ export async function logIn(prevState: any, formData: FormData) {
 
     return { success: true, data: data };
 }
+
+export async function queueMatchmaking(
+    initialTimeSeconds: number,
+    incrementTimeSeconds: number,
+    useDelay?: boolean
+) {}

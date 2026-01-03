@@ -2,6 +2,7 @@
 
 import { logIn } from "@/lib/actions";
 import { DateTime } from "luxon";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect } from "react";
 
 export default function Login() {
@@ -22,6 +23,7 @@ export default function Login() {
                     .toMillis()
                     .toString()
             );
+            window.location.reload();
         }
     }, [state]);
 
