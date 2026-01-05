@@ -4,9 +4,11 @@ import { queueMatchmaking } from "@/lib/actions";
 import { getAccessToken } from "@/lib/util";
 import SignalRConnection from "./signalr-connection";
 import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function QuickPlayList() {
+    const router = useRouter();
+
     return (
         <SignalRConnection
             connectionProvider={() => {
@@ -20,7 +22,7 @@ export default function QuickPlayList() {
                     .build();
 
                 connection.on("MatchFound", (matchId) =>
-                    redirect(`/match/${matchId}`)
+                    router.push(`/match/${matchId}`)
                 );
 
                 connection

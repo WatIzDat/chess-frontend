@@ -1,14 +1,17 @@
 "use client";
 
+import SignalRConnection from "@/components/signalr-connection";
+import { getAccessToken } from "@/lib/util";
+import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import { Chess, Square } from "chess.js";
-import { useRef, useState } from "react";
+import { use, useRef, useState } from "react";
 import {
     Chessboard,
     PieceDropHandlerArgs,
     SquareHandlerArgs,
 } from "react-chessboard";
 
-export default function Match() {
+export default function Match({ params }: { params: Promise<{ id: string }> }) {
     // From https://react-chessboard.vercel.app/?path=/docs/how-to-use-basic-examples--docs
 
     // create a chess game using a ref to always have access to the latest game state within closures and maintain the game state across renders
@@ -20,26 +23,26 @@ export default function Match() {
     const [moveFrom, setMoveFrom] = useState("");
     const [optionSquares, setOptionSquares] = useState({});
 
-    // make a random "CPU" move
-    function makeRandomMove() {
-        // get all possible moves`
-        const possibleMoves = chessGame.moves();
+    // // make a random "CPU" move
+    // function makeRandomMove() {
+    //     // get all possible moves`
+    //     const possibleMoves = chessGame.moves();
 
-        // exit if the game is over
-        if (chessGame.isGameOver()) {
-            return;
-        }
+    //     // exit if the game is over
+    //     if (chessGame.isGameOver()) {
+    //         return;
+    //     }
 
-        // pick a random move
-        const randomMove =
-            possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+    //     // pick a random move
+    //     const randomMove =
+    //         possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
 
-        // make the move
-        chessGame.move(randomMove);
+    //     // make the move
+    //     chessGame.move(randomMove);
 
-        // update the position state
-        setChessPosition(chessGame.fen());
-    }
+    //     // update the position state
+    //     setChessPosition(chessGame.fen());
+    // }
 
     // get the move options for a square to show valid moves
     function getMoveOptions(square: Square) {
@@ -143,7 +146,7 @@ export default function Match() {
         setChessPosition(chessGame.fen());
 
         // make random cpu move after a short delay
-        setTimeout(makeRandomMove, 300);
+        // setTimeout(makeRandomMove, 300);
 
         // clear moveFrom and optionSquares
         setMoveFrom("");
@@ -173,7 +176,7 @@ export default function Match() {
             setOptionSquares({});
 
             // make random cpu move after a short delay
-            setTimeout(makeRandomMove, 500);
+            // setTimeout(makeRandomMove, 500);
 
             // return true as the move was successful
             return true;
@@ -192,11 +195,98 @@ export default function Match() {
         id: "click-or-drag-to-move",
     };
 
+    const [whiteTime, setWhiteTime] = useState(0);
+    const [blackTime, setBlackTime] = useState(0);
+
+    const [serverTimestamp, setServerTimestamp] = useState(0);
+    const [serverTimeOffset, setServerTimeOffset] = useState(0);
+
+    const { id: matchId } = use(params);
+
     return (
-        <div className="w-full h-screen flex items-center justify-center">
-            <div className="p-12 w-1/2 h-full flex flex-col items-center justify-center">
-                <Chessboard options={chessboardOptions} />
-            </div>
-        </div>
+        <SignalRConnection
+            connectionProvider={() => {
+                const connection = new HubConnectionBuilder()
+                    .configureLogging(LogLevel.Debug)
+                    .withUrl("http://localhost:5075/hubs/game", {
+                        accessTokenFactory: getAccessToken,
+                    })
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on(
+                    "ReceiveJoin",
+                    (
+                        type: number,
+                        allPlayersJoined: boolean,
+                        whiteTimeRemaining: number,
+                        blackTimeRemaining: number,
+                        newServerTimestamp: number
+                    ) => {
+                        setWhiteTime(whiteTimeRemaining);
+                        setBlackTime(blackTimeRemaining);
+
+                        console.log("test");
+
+                        if (allPlayersJoined) {
+                            setServerTimestamp(newServerTimestamp);
+
+                            const clientReceiveTime: number = performance.now();
+                            setServerTimeOffset(
+                                serverTimestamp - clientReceiveTime
+                            );
+                        }
+                    }
+                );
+
+                connection.on(
+                    "ReceiveMove",
+                    (
+                        board: string,
+                        result: number,
+                        timeRemaining: number,
+                        newServerTimestamp: number
+                    ) => {
+                        if (chessGame.turn() === "w") {
+                            setWhiteTime(timeRemaining);
+                        } else {
+                            setBlackTime(timeRemaining);
+                        }
+
+                        chessGame.load(board);
+
+                        setServerTimestamp(newServerTimestamp);
+
+                        const clientReceiveTime: number = performance.now();
+                        setServerTimeOffset(
+                            serverTimestamp - clientReceiveTime
+                        );
+                    }
+                );
+
+                connection
+                    .start()
+                    .then(() => {
+                        console.log("Connected to SignalR");
+
+                        connection.invoke("JoinMatch", matchId);
+                    })
+                    .catch((err) =>
+                        console.error("SignalR connection error:", err)
+                    );
+
+                return connection;
+            }}
+        >
+            {() => (
+                <div className="w-full h-screen flex items-center justify-center">
+                    <div className="p-12 w-1/2 h-full flex flex-col items-center justify-center">
+                        <p>{whiteTime}</p>
+                        <Chessboard options={chessboardOptions} />
+                        <p>{blackTime}</p>
+                    </div>
+                </div>
+            )}
+        </SignalRConnection>
     );
 }
