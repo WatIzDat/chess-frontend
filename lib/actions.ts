@@ -53,6 +53,15 @@ export async function queueMatchmaking(
     incrementTimeSeconds: number,
     useDelay?: boolean
 ) {
+    // const connection = new signalR.HubConnectionBuilder()
+    //     .withUrl("http://localhost:5075/matchmakingHub", {
+    //         accessTokenFactory: getAccessToken,
+    //     })
+    //     .withAutomaticReconnect()
+    //     .build();
+
+    // connection.on("MatchFound", (matchId) => redirect(`/match/${matchId}`));
+
     const response = await fetch("http://localhost:5075/queue", {
         method: "POST",
         headers: {

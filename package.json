@@ -9,6 +9,7 @@
         "lint": "eslint"
     },
     "dependencies": {
+        "@microsoft/signalr": "^10.0.0",
         "chess.js": "^1.4.0",
         "luxon": "^3.7.2",
         "next": "16.1.1",
