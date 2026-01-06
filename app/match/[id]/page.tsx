@@ -278,17 +278,39 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                     .withAutomaticReconnect()
                     .build();
 
+                const loadBoard = (board: string) => {
+                    if (
+                        validateFen(board).error ===
+                        "Invalid FEN: illegal en-passant square"
+                    ) {
+                        const boardWithoutEpSquare = board.split(" ");
+
+                        boardWithoutEpSquare[3] = "-";
+
+                        chessGame.load(boardWithoutEpSquare.join(" "));
+                    } else {
+                        chessGame.load(board);
+                    }
+                };
+
                 connection.on(
                     "ReceiveJoin",
                     (
-                        type: number,
+                        joinType: number,
                         allPlayersJoined: boolean,
                         whiteTimeRemaining: number,
                         blackTimeRemaining: number,
+                        board: string,
                         newServerTimestamp: number
                     ) => {
                         setWhiteTime(whiteTimeRemaining);
                         setBlackTime(blackTimeRemaining);
+
+                        loadBoard(board);
+
+                        chessGame.setTurn(type === 1 ? "b" : "w");
+
+                        setChessPosition(board);
 
                         console.log("test");
 
@@ -319,18 +341,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                             setBlackTime(timeRemaining);
                         }
 
-                        if (
-                            validateFen(board).error ===
-                            "Invalid FEN: illegal en-passant square"
-                        ) {
-                            const boardWithoutEpSquare = board.split(" ");
-
-                            boardWithoutEpSquare[3] = "-";
-
-                            chessGame.load(boardWithoutEpSquare.join(" "));
-                        } else {
-                            chessGame.load(board);
-                        }
+                        loadBoard(board);
 
                         chessGame.setTurn(type === 1 ? "b" : "w");
 
@@ -347,41 +358,45 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                     }
                 );
 
+                const onConnected = async () => {
+                    console.log("Connected to SignalR");
+
+                    connection.invoke("JoinMatch", matchId);
+
+                    if (type === 0) {
+                        chessGame.setTurn("w");
+
+                        // setPlayerColor("w");
+
+                        setChessboardOptions({
+                            ...chessboardOptions,
+                            onPieceDrop: onPieceDrop(connection),
+                            onSquareClick: onSquareClick(connection),
+                            boardOrientation: "white",
+                        });
+
+                        setChessPosition(chessGame.fen());
+                    } else if (type === 1) {
+                        chessGame.setTurn("b");
+
+                        // setPlayerColor("b");
+
+                        setChessboardOptions({
+                            ...chessboardOptions,
+                            onPieceDrop: onPieceDrop(connection),
+                            onSquareClick: onSquareClick(connection),
+                            boardOrientation: "black",
+                        });
+
+                        setChessPosition(chessGame.fen());
+                    }
+                };
+
+                connection.onreconnected(onConnected);
+
                 connection
                     .start()
-                    .then(async () => {
-                        console.log("Connected to SignalR");
-
-                        connection.invoke("JoinMatch", matchId);
-
-                        if (type === 0) {
-                            chessGame.setTurn("w");
-
-                            // setPlayerColor("w");
-
-                            setChessboardOptions({
-                                ...chessboardOptions,
-                                onPieceDrop: onPieceDrop(connection),
-                                onSquareClick: onSquareClick(connection),
-                                boardOrientation: "white",
-                            });
-
-                            setChessPosition(chessGame.fen());
-                        } else if (type === 1) {
-                            chessGame.setTurn("b");
-
-                            // setPlayerColor("b");
-
-                            setChessboardOptions({
-                                ...chessboardOptions,
-                                onPieceDrop: onPieceDrop(connection),
-                                onSquareClick: onSquareClick(connection),
-                                boardOrientation: "black",
-                            });
-
-                            setChessPosition(chessGame.fen());
-                        }
-                    })
+                    .then(onConnected)
                     .catch((err) =>
                         console.error("SignalR connection error:", err)
                     );
