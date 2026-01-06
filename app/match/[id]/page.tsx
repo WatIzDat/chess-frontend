@@ -2,11 +2,16 @@
 
 import SignalRConnection from "@/components/signalr-connection";
 import { getAccessToken } from "@/lib/util";
-import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
+import {
+    HubConnection,
+    HubConnectionBuilder,
+    LogLevel,
+} from "@microsoft/signalr";
 import { Chess, Square } from "chess.js";
-import { use, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import {
     Chessboard,
+    ChessboardOptions,
     PieceDropHandlerArgs,
     SquareHandlerArgs,
 } from "react-chessboard";
@@ -22,6 +27,8 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
     const [chessPosition, setChessPosition] = useState(chessGame.fen());
     const [moveFrom, setMoveFrom] = useState("");
     const [optionSquares, setOptionSquares] = useState({});
+
+    const [connection, setConnection] = useState<HubConnection | null>(null);
 
     // // make a random "CPU" move
     // function makeRandomMove() {
@@ -86,114 +93,144 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         // return true to indicate that there are move options
         return true;
     }
-    function onSquareClick({ square, piece }: SquareHandlerArgs) {
-        // piece clicked to move
-        if (!moveFrom && piece) {
-            // get the move options for the square
-            const hasMoveOptions = getMoveOptions(square as Square);
+    function onSquareClick(conn: HubConnection | null) {
+        return ({ square, piece }: SquareHandlerArgs) => {
+            // piece clicked to move
+            console.log("on square click");
+            if (!moveFrom && piece) {
+                // get the move options for the square
+                const hasMoveOptions = getMoveOptions(square as Square);
 
-            // if move options, set the moveFrom to the square
-            if (hasMoveOptions) {
-                setMoveFrom(square);
+                // if move options, set the moveFrom to the square
+                if (hasMoveOptions) {
+                    setMoveFrom(square);
+                }
+
+                // return early
+                return;
             }
 
-            // return early
-            return;
-        }
-
-        // square clicked to move to, check if valid move
-        const moves = chessGame.moves({
-            square: moveFrom as Square,
-            verbose: true,
-        });
-        const foundMove = moves.find(
-            (m) => m.from === moveFrom && m.to === square
-        );
-
-        // not a valid move
-        if (!foundMove) {
-            // check if clicked on new piece
-            const hasMoveOptions = getMoveOptions(square as Square);
-
-            // if new piece, setMoveFrom, otherwise clear moveFrom
-            setMoveFrom(hasMoveOptions ? square : "");
-
-            // return early
-            return;
-        }
-
-        // is normal move
-        try {
-            chessGame.move({
-                from: moveFrom,
-                to: square,
-                promotion: "q",
+            // square clicked to move to, check if valid move
+            const moves = chessGame.moves({
+                square: moveFrom as Square,
+                verbose: true,
             });
-        } catch {
-            // if invalid, setMoveFrom and getMoveOptions
-            const hasMoveOptions = getMoveOptions(square as Square);
+            const foundMove = moves.find(
+                (m) => m.from === moveFrom && m.to === square
+            );
 
-            // if new piece, setMoveFrom, otherwise clear moveFrom
-            if (hasMoveOptions) {
-                setMoveFrom(square);
+            // not a valid move
+            if (!foundMove) {
+                // check if clicked on new piece
+                const hasMoveOptions = getMoveOptions(square as Square);
+
+                // if new piece, setMoveFrom, otherwise clear moveFrom
+                setMoveFrom(hasMoveOptions ? square : "");
+
+                // return early
+                return;
             }
 
-            // return early
-            return;
-        }
+            // is normal move
+            try {
+                chessGame.move({
+                    from: moveFrom,
+                    to: square,
+                    promotion: "q",
+                });
+            } catch {
+                // if invalid, setMoveFrom and getMoveOptions
+                const hasMoveOptions = getMoveOptions(square as Square);
 
-        // update the position state
-        setChessPosition(chessGame.fen());
+                // if new piece, setMoveFrom, otherwise clear moveFrom
+                if (hasMoveOptions) {
+                    setMoveFrom(square);
+                }
 
-        // make random cpu move after a short delay
-        // setTimeout(makeRandomMove, 300);
+                // return early
+                return;
+            }
 
-        // clear moveFrom and optionSquares
-        setMoveFrom("");
-        setOptionSquares({});
-    }
-
-    // handle piece drop
-    function onPieceDrop({ sourceSquare, targetSquare }: PieceDropHandlerArgs) {
-        // type narrow targetSquare potentially being null (e.g. if dropped off board)
-        if (!targetSquare) {
-            return false;
-        }
-
-        // try to make the move according to chess.js logic
-        try {
-            chessGame.move({
-                from: sourceSquare,
-                to: targetSquare,
-                promotion: "q", // always promote to a queen for example simplicity
-            });
-
-            // update the position state upon successful move to trigger a re-render of the chessboard
+            // update the position state
             setChessPosition(chessGame.fen());
+
+            // make random cpu move after a short delay
+            // setTimeout(makeRandomMove, 300);
 
             // clear moveFrom and optionSquares
             setMoveFrom("");
             setOptionSquares({});
 
-            // make random cpu move after a short delay
-            // setTimeout(makeRandomMove, 500);
+            conn?.invoke("SendMove", `${moveFrom}${square}`, matchId);
+        };
+    }
 
-            // return true as the move was successful
-            return true;
-        } catch {
-            // return false as the move was not successful
-            return false;
-        }
+    // handle piece drop
+    function onPieceDrop(conn: HubConnection | null) {
+        return ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
+            // type narrow targetSquare potentially being null (e.g. if dropped off board)
+            if (!targetSquare) {
+                return false;
+            }
+
+            // try to make the move according to chess.js logic
+            try {
+                chessGame.move({
+                    from: sourceSquare,
+                    to: targetSquare,
+                    promotion: "q", // always promote to a queen for example simplicity
+                });
+
+                console.log(connection);
+
+                console.log("move sent");
+
+                // update the position state upon successful move to trigger a re-render of the chessboard
+                setChessPosition(chessGame.fen());
+
+                // clear moveFrom and optionSquares
+                setMoveFrom("");
+                setOptionSquares({});
+
+                conn?.invoke(
+                    "SendMove",
+                    `${sourceSquare}${targetSquare}`,
+                    matchId
+                );
+
+                // make random cpu move after a short delay
+                // setTimeout(makeRandomMove, 500);
+
+                // return true as the move was successful
+                return true;
+            } catch {
+                // return false as the move was not successful
+                return false;
+            }
+        };
     }
 
     // set the chessboard options
-    const chessboardOptions = {
-        onPieceDrop,
-        onSquareClick,
-        position: chessPosition,
-        squareStyles: optionSquares,
-        id: "click-or-drag-to-move",
-    };
+    const [chessboardOptions, setChessboardOptions] =
+        useState<ChessboardOptions>({
+            // onPieceDrop: onPieceDrop(null),
+            // onSquareClick: onSquareClick(null),
+            position: chessPosition,
+            squareStyles: optionSquares,
+            id: "click-or-drag-to-move",
+        });
+
+    useEffect(() => {
+        console.log("effect");
+        console.log(connection);
+        setChessboardOptions({
+            ...chessboardOptions,
+            onPieceDrop: onPieceDrop(connection),
+            onSquareClick: onSquareClick(connection),
+            position: chessPosition,
+            squareStyles: optionSquares,
+        });
+    }, [chessPosition, optionSquares, connection]);
 
     const [whiteTime, setWhiteTime] = useState(0);
     const [blackTime, setBlackTime] = useState(0);
@@ -205,6 +242,8 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
     return (
         <SignalRConnection
+            connection={connection}
+            setConnection={setConnection}
             connectionProvider={() => {
                 const connection = new HubConnectionBuilder()
                     .configureLogging(LogLevel.Debug)
@@ -247,6 +286,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         timeRemaining: number,
                         newServerTimestamp: number
                     ) => {
+                        console.log("move received");
                         if (chessGame.turn() === "w") {
                             setWhiteTime(timeRemaining);
                         } else {
@@ -254,6 +294,10 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         }
 
                         chessGame.load(board);
+
+                        console.log(board);
+
+                        setChessPosition(board);
 
                         setServerTimestamp(newServerTimestamp);
 
@@ -266,14 +310,65 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
                 connection
                     .start()
-                    .then(() => {
+                    .then(async () => {
                         console.log("Connected to SignalR");
 
                         connection.invoke("JoinMatch", matchId);
+
+                        const response = await fetch(
+                            `http://localhost:5075/match/${matchId}/type`,
+                            {
+                                headers: {
+                                    Authorization: `Bearer ${await getAccessToken()}`,
+                                },
+                            }
+                        );
+
+                        if (!response.ok) {
+                            console.error("Couldn't get player type");
+
+                            return;
+                        }
+
+                        const type = await response.json();
+
+                        if (type === 0) {
+                            chessGame.setTurn("w");
+
+                            chessboardOptions.boardOrientation = "white";
+
+                            setChessboardOptions({
+                                ...chessboardOptions,
+                                onPieceDrop: onPieceDrop(connection),
+                                onSquareClick: onSquareClick(connection),
+                                boardOrientation: "white",
+                            });
+
+                            setChessPosition(chessGame.fen());
+                        } else if (type === 1) {
+                            chessGame.setTurn("b");
+
+                            chessboardOptions.boardOrientation = "black";
+
+                            setChessboardOptions({
+                                ...chessboardOptions,
+                                onPieceDrop: onPieceDrop(connection),
+                                onSquareClick: onSquareClick(connection),
+                                boardOrientation: "black",
+                            });
+
+                            setChessPosition(chessGame.fen());
+                        }
                     })
                     .catch((err) =>
                         console.error("SignalR connection error:", err)
                     );
+
+                // setChessboardOptions({
+                //     ...chessboardOptions,
+                //     onPieceDrop: onPieceDrop(connection),
+                //     onSquareClick: onSquareClick(connection),
+                // });
 
                 return connection;
             }}
