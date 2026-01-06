@@ -7,7 +7,7 @@ import {
     HubConnectionBuilder,
     LogLevel,
 } from "@microsoft/signalr";
-import { Chess, Square } from "chess.js";
+import { Chess, Color, Square, validateFen } from "chess.js";
 import { use, useEffect, useRef, useState } from "react";
 import {
     Chessboard,
@@ -238,13 +238,38 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
     const [serverTimestamp, setServerTimestamp] = useState(0);
     const [serverTimeOffset, setServerTimeOffset] = useState(0);
 
+    // const [playerColor, setPlayerColor] = useState<Color>("w");
+
     const { id: matchId } = use(params);
 
     return (
         <SignalRConnection
             connection={connection}
-            setConnection={setConnection}
-            connectionProvider={() => {
+            setConnection={(conn) => {
+                setChessboardOptions({
+                    ...chessboardOptions,
+                    onPieceDrop: onPieceDrop(conn),
+                    onSquareClick: onSquareClick(conn),
+                    boardOrientation: "white",
+                });
+                setConnection(conn);
+            }}
+            connectionProvider={async () => {
+                const response = await fetch(
+                    `http://localhost:5075/match/${matchId}/type`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${await getAccessToken()}`,
+                        },
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error("Couldn't get player type");
+                }
+
+                const type = await response.json();
+
                 const connection = new HubConnectionBuilder()
                     .configureLogging(LogLevel.Debug)
                     .withUrl("http://localhost:5075/hubs/game", {
@@ -287,13 +312,27 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         newServerTimestamp: number
                     ) => {
                         console.log("move received");
+
                         if (chessGame.turn() === "w") {
                             setWhiteTime(timeRemaining);
                         } else {
                             setBlackTime(timeRemaining);
                         }
 
-                        chessGame.load(board);
+                        if (
+                            validateFen(board).error ===
+                            "Invalid FEN: illegal en-passant square"
+                        ) {
+                            const boardWithoutEpSquare = board.split(" ");
+
+                            boardWithoutEpSquare[3] = "-";
+
+                            chessGame.load(boardWithoutEpSquare.join(" "));
+                        } else {
+                            chessGame.load(board);
+                        }
+
+                        chessGame.setTurn(type === 1 ? "b" : "w");
 
                         console.log(board);
 
@@ -315,27 +354,10 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
                         connection.invoke("JoinMatch", matchId);
 
-                        const response = await fetch(
-                            `http://localhost:5075/match/${matchId}/type`,
-                            {
-                                headers: {
-                                    Authorization: `Bearer ${await getAccessToken()}`,
-                                },
-                            }
-                        );
-
-                        if (!response.ok) {
-                            console.error("Couldn't get player type");
-
-                            return;
-                        }
-
-                        const type = await response.json();
-
                         if (type === 0) {
                             chessGame.setTurn("w");
 
-                            chessboardOptions.boardOrientation = "white";
+                            // setPlayerColor("w");
 
                             setChessboardOptions({
                                 ...chessboardOptions,
@@ -348,7 +370,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         } else if (type === 1) {
                             chessGame.setTurn("b");
 
-                            chessboardOptions.boardOrientation = "black";
+                            // setPlayerColor("b");
 
                             setChessboardOptions({
                                 ...chessboardOptions,

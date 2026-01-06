@@ -8,19 +8,21 @@ export default function SignalRConnection({
     setConnection,
 }: {
     children: (connection?: HubConnection) => React.ReactNode;
-    connectionProvider: () => HubConnection;
+    connectionProvider: () => Promise<HubConnection>;
     connection?: HubConnection | null;
-    setConnection?: Dispatch<SetStateAction<HubConnection | null>>;
+    setConnection?: (connection: HubConnection | null) => void;
 }) {
     // const [connection, setConnection] = useState<HubConnection | null>(null);
 
     useEffect(() => {
-        const connection: HubConnection = connectionProvider();
+        (async () => {
+            const connection: HubConnection = await connectionProvider();
 
-        if (setConnection) {
-            console.log(connection);
-            setConnection(connection);
-        }
+            if (setConnection) {
+                console.log(connection);
+                setConnection(connection);
+            }
+        })();
     }, []);
 
     return children(connection ? connection : undefined);
