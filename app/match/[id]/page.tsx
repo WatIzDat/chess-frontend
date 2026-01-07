@@ -1,7 +1,8 @@
 "use client";
 
 import SignalRConnection from "@/components/signalr-connection";
-import { getAccessToken } from "@/lib/util";
+import { useChessClock } from "@/lib/hooks";
+import { formatTimeMs, getAccessToken } from "@/lib/util";
 import {
     HubConnection,
     HubConnectionBuilder,
@@ -235,10 +236,66 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
     const [whiteTime, setWhiteTime] = useState(0);
     const [blackTime, setBlackTime] = useState(0);
 
-    const [serverTimestamp, setServerTimestamp] = useState(0);
-    const [serverTimeOffset, setServerTimeOffset] = useState(0);
+    const [serverTimestamp, setServerTimestamp] = useState<number | null>(null);
+    const [serverTimeOffset, setServerTimeOffset] = useState<number | null>(
+        null
+    );
 
     // const [playerColor, setPlayerColor] = useState<Color>("w");
+
+    const [gameTurn, setGameTurn] = useState<"w" | "b">("w");
+
+    // const { white: whiteDisplayTime, black: blackDisplayTime } = useChessClock(
+    //     whiteTime,
+    //     blackTime,
+    //     gameTurn,
+    //     serverTimestamp,
+    //     serverTimeOffset
+    // );
+
+    const [display, setDisplay] = useState({
+        white: 0,
+        black: 0,
+    });
+
+    const animationFrameIdRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        const tick = () => {
+            if (!serverTimeOffset || !serverTimestamp) {
+                return;
+            }
+
+            const estimatedServerNow = performance.now() + serverTimeOffset;
+            const elapsedTime = estimatedServerNow - serverTimestamp;
+
+            let whiteTimeRemaining = whiteTime;
+            let blackTimeRemaining = blackTime;
+
+            console.log("Black time: " + blackTimeRemaining);
+
+            if (gameTurn === "w") {
+                whiteTimeRemaining -= elapsedTime;
+            } else {
+                blackTimeRemaining -= elapsedTime;
+            }
+
+            setDisplay({
+                white: whiteTimeRemaining,
+                black: blackTimeRemaining,
+            });
+
+            animationFrameIdRef.current = requestAnimationFrame(tick);
+        };
+
+        animationFrameIdRef.current = requestAnimationFrame(tick);
+
+        return () => {
+            if (animationFrameIdRef.current) {
+                cancelAnimationFrame(animationFrameIdRef.current);
+            }
+        };
+    }, [serverTimeOffset]);
 
     const { id: matchId } = use(params);
 
@@ -291,6 +348,8 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                     } else {
                         chessGame.load(board);
                     }
+
+                    setGameTurn(chessGame.turn());
                 };
 
                 connection.on(
@@ -303,6 +362,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         board: string,
                         newServerTimestamp: number
                     ) => {
+                        // console.log("Black time: " + blackTimeRemaining);
                         setWhiteTime(whiteTimeRemaining);
                         setBlackTime(blackTimeRemaining);
 
@@ -319,7 +379,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
                             const clientReceiveTime: number = performance.now();
                             setServerTimeOffset(
-                                serverTimestamp - clientReceiveTime
+                                newServerTimestamp - clientReceiveTime
                             );
                         }
                     }
@@ -353,7 +413,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
                         const clientReceiveTime: number = performance.now();
                         setServerTimeOffset(
-                            serverTimestamp - clientReceiveTime
+                            newServerTimestamp - clientReceiveTime
                         );
                     }
                 );
@@ -411,12 +471,16 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
             }}
         >
             {() => (
-                <div className="w-full h-screen flex items-center justify-center">
-                    <div className="p-12 w-1/2 h-full flex flex-col items-center justify-center">
-                        <p>{whiteTime}</p>
+                <div className="w-full flex flex-col items-center justify-center">
+                    <div>{display.white}</div>
+                    <div>{formatTimeMs(display.white)}</div>
+                    {/* <div className="p-12 w-1/2 flex flex-col items-center justify-center"> */}
+                    <div className="max-w-[70vh] h-full">
                         <Chessboard options={chessboardOptions} />
-                        <p>{blackTime}</p>
                     </div>
+                    {/* </div> */}
+                    <div>{display.black}</div>
+                    <div>{formatTimeMs(display.black)}</div>
                 </div>
             )}
         </SignalRConnection>

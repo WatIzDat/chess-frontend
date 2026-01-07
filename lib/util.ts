@@ -1,4 +1,4 @@
-import { DateTime } from "luxon";
+import { DateTime, Duration } from "luxon";
 
 export async function getAccessToken() {
     const expirationMillis: string | null = localStorage.getItem(
@@ -41,4 +41,12 @@ export async function getAccessToken() {
     );
 
     return data.accessToken;
+}
+
+export function formatTimeMs(timeMs: number) {
+    return Duration.fromMillis(timeMs).toFormat("hh:mm:ss:SS");
+    // const totalSeconds = Math.floor(timeMs / 1000);
+    // const minutes = Math.floor(totalSeconds / 60);
+    // const seconds = totalSeconds % 60;
+    // return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
