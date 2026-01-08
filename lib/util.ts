@@ -44,7 +44,7 @@ export async function getAccessToken() {
 }
 
 export function formatTimeMs(timeMs: number) {
-    return Duration.fromMillis(timeMs).toFormat("hh:mm:ss:SS");
+    return Duration.fromMillis(timeMs).toFormat("hh:mm:ss.S");
     // const totalSeconds = Math.floor(timeMs / 1000);
     // const minutes = Math.floor(totalSeconds / 60);
     // const seconds = totalSeconds % 60;

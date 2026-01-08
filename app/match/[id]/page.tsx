@@ -395,13 +395,13 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                     ) => {
                         console.log("move received");
 
-                        if (chessGame.turn() === "w") {
-                            setWhiteTime(timeRemaining);
-                        } else {
-                            setBlackTime(timeRemaining);
-                        }
-
                         loadBoard(board);
+
+                        if (chessGame.turn() === "w") {
+                            setBlackTime(timeRemaining);
+                        } else {
+                            setWhiteTime(timeRemaining);
+                        }
 
                         chessGame.setTurn(type === 1 ? "b" : "w");
 
@@ -472,15 +472,21 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         >
             {() => (
                 <div className="w-full flex flex-col items-center justify-center">
-                    <div>{display.white}</div>
-                    <div>{formatTimeMs(display.white)}</div>
+                    <div>
+                        {chessGame.turn() === "w"
+                            ? formatTimeMs(display.black)
+                            : formatTimeMs(display.white)}
+                    </div>
                     {/* <div className="p-12 w-1/2 flex flex-col items-center justify-center"> */}
                     <div className="max-w-[70vh] h-full">
                         <Chessboard options={chessboardOptions} />
                     </div>
                     {/* </div> */}
-                    <div>{display.black}</div>
-                    <div>{formatTimeMs(display.black)}</div>
+                    <div>
+                        {chessGame.turn() === "w"
+                            ? formatTimeMs(display.white)
+                            : formatTimeMs(display.black)}
+                    </div>
                 </div>
             )}
         </SignalRConnection>
