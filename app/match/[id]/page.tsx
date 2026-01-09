@@ -253,49 +253,57 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
     //     serverTimeOffset
     // );
 
-    const [display, setDisplay] = useState({
-        white: 0,
-        black: 0,
-    });
+    // const [display, setDisplay] = useState({
+    //     white: 0,
+    //     black: 0,
+    // });
 
-    const animationFrameIdRef = useRef<number | null>(null);
+    // const animationFrameIdRef = useRef<number | null>(null);
 
-    useEffect(() => {
-        const tick = () => {
-            if (!serverTimeOffset || !serverTimestamp) {
-                return;
-            }
+    // useEffect(() => {
+    //     const tick = () => {
+    //         if (!serverTimeOffset || !serverTimestamp) {
+    //             return;
+    //         }
 
-            const estimatedServerNow = performance.now() + serverTimeOffset;
-            const elapsedTime = estimatedServerNow - serverTimestamp;
+    //         const estimatedServerNow = performance.now() + serverTimeOffset;
+    //         const elapsedTime = estimatedServerNow - serverTimestamp;
 
-            let whiteTimeRemaining = whiteTime;
-            let blackTimeRemaining = blackTime;
+    //         let whiteTimeRemaining = whiteTime;
+    //         let blackTimeRemaining = blackTime;
 
-            console.log("Black time: " + blackTimeRemaining);
+    //         console.log("Black time: " + blackTimeRemaining);
 
-            if (gameTurn === "w") {
-                whiteTimeRemaining -= elapsedTime;
-            } else {
-                blackTimeRemaining -= elapsedTime;
-            }
+    //         if (gameTurn === "w") {
+    //             whiteTimeRemaining -= elapsedTime;
+    //         } else {
+    //             blackTimeRemaining -= elapsedTime;
+    //         }
 
-            setDisplay({
-                white: whiteTimeRemaining,
-                black: blackTimeRemaining,
-            });
+    //         setDisplay({
+    //             white: whiteTimeRemaining,
+    //             black: blackTimeRemaining,
+    //         });
 
-            animationFrameIdRef.current = requestAnimationFrame(tick);
-        };
+    //         animationFrameIdRef.current = requestAnimationFrame(tick);
+    //     };
 
-        animationFrameIdRef.current = requestAnimationFrame(tick);
+    //     animationFrameIdRef.current = requestAnimationFrame(tick);
 
-        return () => {
-            if (animationFrameIdRef.current) {
-                cancelAnimationFrame(animationFrameIdRef.current);
-            }
-        };
-    }, [serverTimeOffset]);
+    //     return () => {
+    //         if (animationFrameIdRef.current) {
+    //             cancelAnimationFrame(animationFrameIdRef.current);
+    //         }
+    //     };
+    // }, [serverTimeOffset]);
+
+    const display = useChessClock(
+        whiteTime,
+        blackTime,
+        gameTurn,
+        serverTimestamp,
+        serverTimeOffset
+    );
 
     const { id: matchId } = use(params);
 

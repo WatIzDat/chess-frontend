@@ -4,8 +4,8 @@ export function useChessClock(
     whiteTime: number,
     blackTime: number,
     turn: "w" | "b",
-    serverTimestamp: number,
-    serverTimeOffset: number
+    serverTimestamp: number | null,
+    serverTimeOffset: number | null
 ) {
     const [display, setDisplay] = useState({
         white: 0,
@@ -16,6 +16,10 @@ export function useChessClock(
 
     useEffect(() => {
         const tick = () => {
+            if (!serverTimeOffset || !serverTimestamp) {
+                return;
+            }
+
             const estimatedServerNow = performance.now() + serverTimeOffset;
             const elapsedTime = estimatedServerNow - serverTimestamp;
 
