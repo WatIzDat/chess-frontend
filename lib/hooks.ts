@@ -51,5 +51,5 @@ export function useChessClock(
         };
     }, [serverTimeOffset]);
 
-    return display;
+    return { display, animationFrameIdRef };
 }

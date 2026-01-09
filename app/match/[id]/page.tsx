@@ -297,7 +297,22 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
     //     };
     // }, [serverTimeOffset]);
 
-    const display = useChessClock(
+    const [playerType, setPlayerType] = useState<
+        "white" | "black" | "spectator" | null
+    >(null);
+
+    type GameResult =
+        | "none"
+        | "checkmate"
+        | "stalemate"
+        | "drawByRepetition"
+        | "drawByFiftyMoveRule"
+        | "drawByInsufficientMaterial"
+        | "flag";
+
+    const [gameResult, setGameResult] = useState<GameResult>("none");
+
+    const { display, animationFrameIdRef } = useChessClock(
         whiteTime,
         blackTime,
         gameTurn,
@@ -306,6 +321,80 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
     );
 
     const { id: matchId } = use(params);
+
+    const getResultMessage = (result: GameResult) => {
+        switch (result) {
+            case "none":
+                return;
+            case "checkmate":
+                return (
+                    <header>
+                        <h1>
+                            {playerType ===
+                            (gameTurn === "w" ? "white" : "black")
+                                ? "You lose!"
+                                : "You win!"}
+                        </h1>
+                        <p>
+                            {playerType ===
+                            (gameTurn === "w" ? "white" : "black")
+                                ? "Your opponent checkmated you, but you still played a great game. Congrats!"
+                                : "You successfully checkmated your opponent. Congrats!"}
+                        </p>
+                    </header>
+                );
+            case "stalemate":
+                return (
+                    <header>
+                        <h1>Draw!</h1>
+                        <p>The game is drawn by stalemate. Good game!</p>
+                    </header>
+                );
+            case "drawByRepetition":
+                return (
+                    <header>
+                        <h1>Draw!</h1>
+                        <p>The game is drawn by repetition. Good game!</p>
+                    </header>
+                );
+            case "drawByFiftyMoveRule":
+                return (
+                    <header>
+                        <h1>Draw!</h1>
+                        <p>
+                            The game is drawn by the fifty move rule. Good game!
+                        </p>
+                    </header>
+                );
+            case "drawByInsufficientMaterial":
+                return (
+                    <header>
+                        <h1>Draw!</h1>
+                        <p>
+                            The game is drawn by insufficient material. Good
+                            game!
+                        </p>
+                    </header>
+                );
+            case "flag":
+                return (
+                    <header>
+                        <h1>
+                            {chessGame.turn() === gameTurn
+                                ? "You lose!"
+                                : "You win!"}
+                        </h1>
+                        <p>
+                            {chessGame.turn() === gameTurn
+                                ? "You lost on time, but you still played a great game. Congrats!"
+                                : "You won on time. Congrats!"}
+                        </p>
+                    </header>
+                );
+            default:
+                break;
+        }
+    };
 
     return (
         <SignalRConnection
@@ -334,6 +423,14 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                 }
 
                 const type = await response.json();
+
+                if (type === 0) {
+                    setPlayerType("white");
+                } else if (type === 1) {
+                    setPlayerType("black");
+                } else {
+                    setPlayerType("spectator");
+                }
 
                 const connection = new HubConnectionBuilder()
                     .configureLogging(LogLevel.Debug)
@@ -411,11 +508,48 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                             setWhiteTime(timeRemaining);
                         }
 
-                        chessGame.setTurn(type === 1 ? "b" : "w");
-
                         console.log(board);
 
                         setChessPosition(board);
+
+                        switch (result) {
+                            case 0:
+                                setGameResult("none");
+                                break;
+                            case 1:
+                                setGameResult("checkmate");
+                                break;
+                            case 2:
+                                setGameResult("stalemate");
+                                break;
+                            case 3:
+                                setGameResult("drawByRepetition");
+                                break;
+                            case 4:
+                                setGameResult("drawByFiftyMoveRule");
+                                break;
+                            case 5:
+                                setGameResult("drawByInsufficientMaterial");
+                                break;
+                            case 6:
+                                setGameResult("flag");
+                                break;
+                            default:
+                                console.error("Invalid result");
+                                break;
+                        }
+
+                        if (result !== 0) {
+                            if (animationFrameIdRef.current) {
+                                cancelAnimationFrame(
+                                    animationFrameIdRef.current
+                                );
+                            }
+
+                            return;
+                        }
+
+                        chessGame.setTurn(type === 1 ? "b" : "w");
 
                         setServerTimestamp(newServerTimestamp);
 
@@ -480,8 +614,9 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         >
             {() => (
                 <div className="w-full flex flex-col items-center justify-center">
+                    {getResultMessage(gameResult)}
                     <div>
-                        {chessGame.turn() === "w"
+                        {playerType === "white"
                             ? formatTimeMs(display.black)
                             : formatTimeMs(display.white)}
                     </div>
@@ -491,7 +626,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                     </div>
                     {/* </div> */}
                     <div>
-                        {chessGame.turn() === "w"
+                        {playerType === "white"
                             ? formatTimeMs(display.white)
                             : formatTimeMs(display.black)}
                     </div>
