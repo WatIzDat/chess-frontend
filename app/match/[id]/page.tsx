@@ -312,15 +312,34 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
     const [gameResult, setGameResult] = useState<GameResult>("none");
 
+    const { id: matchId } = use(params);
+
     const { display, animationFrameIdRef } = useChessClock(
         whiteTime,
         blackTime,
         gameTurn,
         serverTimestamp,
-        serverTimeOffset
+        serverTimeOffset,
+        matchId
     );
 
-    const { id: matchId } = use(params);
+    // useEffect(() => {
+    //     localStorage.setItem(`${matchId}:time`, `${whiteTime}:${blackTime}`);
+    // }, [whiteTime, blackTime]);
+
+    useEffect(() => {
+        function beforeUnload(e: BeforeUnloadEvent) {
+            localStorage.setItem(`${matchId}:whiteTime`, `${display.white}`);
+
+            localStorage.setItem(`${matchId}:blackTime`, `${display.black}`);
+        }
+
+        window.addEventListener("beforeunload", beforeUnload);
+
+        return () => {
+            window.removeEventListener("beforeunload", beforeUnload);
+        };
+    }, [display]);
 
     const getResultMessage = (result: GameResult) => {
         switch (result) {
@@ -396,6 +415,35 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         }
     };
 
+    const setGameResultByNumber = (result: number) => {
+        switch (result) {
+            case 0:
+                setGameResult("none");
+                break;
+            case 1:
+                setGameResult("checkmate");
+                break;
+            case 2:
+                setGameResult("stalemate");
+                break;
+            case 3:
+                setGameResult("drawByRepetition");
+                break;
+            case 4:
+                setGameResult("drawByFiftyMoveRule");
+                break;
+            case 5:
+                setGameResult("drawByInsufficientMaterial");
+                break;
+            case 6:
+                setGameResult("flag");
+                break;
+            default:
+                console.error("Invalid result");
+                break;
+        }
+    };
+
     return (
         <SignalRConnection
             connection={connection}
@@ -410,7 +458,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
             }}
             connectionProvider={async () => {
                 const response = await fetch(
-                    `http://localhost:5075/match/${matchId}/type`,
+                    `http://localhost:5075/match/${matchId}`,
                     {
                         headers: {
                             Authorization: `Bearer ${await getAccessToken()}`,
@@ -422,7 +470,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                     throw new Error("Couldn't get player type");
                 }
 
-                const type = await response.json();
+                const { playerType: type, result } = await response.json();
 
                 if (type === 0) {
                     setPlayerType("white");
@@ -460,7 +508,6 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                 connection.on(
                     "ReceiveJoin",
                     (
-                        joinType: number,
                         allPlayersJoined: boolean,
                         whiteTimeRemaining: number,
                         blackTimeRemaining: number,
@@ -471,15 +518,42 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         setWhiteTime(whiteTimeRemaining);
                         setBlackTime(blackTimeRemaining);
 
+                        if (!localStorage.getItem(`${matchId}:whiteTime`)) {
+                            localStorage.setItem(
+                                `${matchId}:whiteTime`,
+                                `${whiteTimeRemaining}`
+                            );
+                        }
+
+                        if (!localStorage.getItem(`${matchId}:blackTime`)) {
+                            localStorage.setItem(
+                                `${matchId}:blackTime`,
+                                `${blackTimeRemaining}`
+                            );
+                        }
+
                         loadBoard(board);
 
-                        chessGame.setTurn(type === 1 ? "b" : "w");
-
                         setChessPosition(board);
+
+                        setGameResultByNumber(result);
+
+                        if (result !== 0) {
+                            if (animationFrameIdRef.current) {
+                                cancelAnimationFrame(
+                                    animationFrameIdRef.current
+                                );
+                            }
+
+                            return;
+                        }
+
+                        chessGame.setTurn(type === 1 ? "b" : "w");
 
                         console.log("test");
 
                         if (allPlayersJoined) {
+                            console.log("all players joined");
                             setServerTimestamp(newServerTimestamp);
 
                             const clientReceiveTime: number = performance.now();
@@ -504,40 +578,25 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
                         if (chessGame.turn() === "w") {
                             setBlackTime(timeRemaining);
+
+                            localStorage.setItem(
+                                `${matchId}:blackTime`,
+                                `${timeRemaining}`
+                            );
                         } else {
                             setWhiteTime(timeRemaining);
+
+                            localStorage.setItem(
+                                `${matchId}:whiteTime`,
+                                `${timeRemaining}`
+                            );
                         }
 
                         console.log(board);
 
                         setChessPosition(board);
 
-                        switch (result) {
-                            case 0:
-                                setGameResult("none");
-                                break;
-                            case 1:
-                                setGameResult("checkmate");
-                                break;
-                            case 2:
-                                setGameResult("stalemate");
-                                break;
-                            case 3:
-                                setGameResult("drawByRepetition");
-                                break;
-                            case 4:
-                                setGameResult("drawByFiftyMoveRule");
-                                break;
-                            case 5:
-                                setGameResult("drawByInsufficientMaterial");
-                                break;
-                            case 6:
-                                setGameResult("flag");
-                                break;
-                            default:
-                                console.error("Invalid result");
-                                break;
-                        }
+                        setGameResultByNumber(result);
 
                         if (result !== 0) {
                             if (animationFrameIdRef.current) {
@@ -566,27 +625,43 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                     connection.invoke("JoinMatch", matchId);
 
                     if (type === 0) {
-                        chessGame.setTurn("w");
+                        if (result === 0) {
+                            chessGame.setTurn("w");
+                        }
 
                         // setPlayerColor("w");
 
                         setChessboardOptions({
                             ...chessboardOptions,
-                            onPieceDrop: onPieceDrop(connection),
-                            onSquareClick: onSquareClick(connection),
+                            onPieceDrop:
+                                result === 0
+                                    ? onPieceDrop(connection)
+                                    : undefined,
+                            onSquareClick:
+                                result === 0
+                                    ? onSquareClick(connection)
+                                    : undefined,
                             boardOrientation: "white",
                         });
 
                         setChessPosition(chessGame.fen());
                     } else if (type === 1) {
-                        chessGame.setTurn("b");
+                        if (result === 0) {
+                            chessGame.setTurn("b");
+                        }
 
                         // setPlayerColor("b");
 
                         setChessboardOptions({
                             ...chessboardOptions,
-                            onPieceDrop: onPieceDrop(connection),
-                            onSquareClick: onSquareClick(connection),
+                            onPieceDrop:
+                                result === 0
+                                    ? onPieceDrop(connection)
+                                    : undefined,
+                            onSquareClick:
+                                result === 0
+                                    ? onSquareClick(connection)
+                                    : undefined,
                             boardOrientation: "black",
                         });
 

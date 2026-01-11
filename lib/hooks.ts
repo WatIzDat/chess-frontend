@@ -5,7 +5,8 @@ export function useChessClock(
     blackTime: number,
     turn: "w" | "b",
     serverTimestamp: number | null,
-    serverTimeOffset: number | null
+    serverTimeOffset: number | null,
+    matchId: string
 ) {
     const [display, setDisplay] = useState({
         white: 0,
@@ -14,7 +15,41 @@ export function useChessClock(
 
     const animationFrameIdRef = useRef<number | null>(null);
 
+    // const [storedTimes, setStoredTimes] = useState([whiteTime, blackTime]);
+
+    // useEffect(() => {
+    //     setStoredTimes(
+    //         localStorage
+    //             .getItem(`${matchId}:time`)
+    //             ?.split(":")
+    //             .map((t) => parseInt(t)) || [whiteTime, blackTime]
+    //     );
+    // }, []);
+
     useEffect(() => {
+        // const storedTimes = localStorage
+        //     .getItem(`${matchId}:time`)
+        //     ?.split(":")
+        //     .map((t) => parseInt(t)) || [whiteTime, blackTime];
+
+        let storedWhiteTime = whiteTime;
+        let storedBlackTime = blackTime;
+
+        const localStorageWhiteTime = localStorage.getItem(
+            `${matchId}:whiteTime`
+        );
+        const localStorageBlackTime = localStorage.getItem(
+            `${matchId}:blackTime`
+        );
+
+        if (localStorageWhiteTime) {
+            storedWhiteTime = parseInt(localStorageWhiteTime);
+        }
+
+        if (localStorageBlackTime) {
+            storedBlackTime = parseInt(localStorageBlackTime);
+        }
+
         const tick = () => {
             if (!serverTimeOffset || !serverTimestamp) {
                 return;
@@ -23,8 +58,8 @@ export function useChessClock(
             const estimatedServerNow = performance.now() + serverTimeOffset;
             const elapsedTime = estimatedServerNow - serverTimestamp;
 
-            let whiteTimeRemaining = whiteTime;
-            let blackTimeRemaining = blackTime;
+            let whiteTimeRemaining = storedWhiteTime;
+            let blackTimeRemaining = storedBlackTime;
 
             console.log("Black time: " + blackTimeRemaining);
 
