@@ -2,6 +2,7 @@
 
 import SignalRConnection from "@/components/signalr-connection";
 import { useChessClock } from "@/lib/hooks";
+import { GameResult } from "@/lib/types";
 import { formatTimeMs, getAccessToken } from "@/lib/util";
 import {
     HubConnection,
@@ -301,16 +302,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         "white" | "black" | "spectator" | null
     >(null);
 
-    type GameResult =
-        | "none"
-        | "checkmate"
-        | "stalemate"
-        | "drawByRepetition"
-        | "drawByFiftyMoveRule"
-        | "drawByInsufficientMaterial"
-        | "flag";
-
-    const [gameResult, setGameResult] = useState<GameResult>("none");
+    const [gameResult, setGameResult] = useState<GameResult | null>(null);
 
     const { id: matchId } = use(params);
 
@@ -320,7 +312,8 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         gameTurn,
         serverTimestamp,
         serverTimeOffset,
-        matchId
+        matchId,
+        gameResult
     );
 
     // useEffect(() => {
@@ -341,7 +334,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         };
     }, [display]);
 
-    const getResultMessage = (result: GameResult) => {
+    const getResultMessage = (result: GameResult | null) => {
         switch (result) {
             case "none":
                 return;
@@ -472,6 +465,8 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
                 const { playerType: type, result } = await response.json();
 
+                // setGameResultByNumber(result);
+
                 if (type === 0) {
                     setPlayerType("white");
                 } else if (type === 1) {
@@ -512,6 +507,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         whiteTimeRemaining: number,
                         blackTimeRemaining: number,
                         board: string,
+                        result: number,
                         newServerTimestamp: number
                     ) => {
                         // console.log("Black time: " + blackTimeRemaining);
@@ -532,9 +528,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                             );
                         }
 
-                        loadBoard(board);
-
-                        setChessPosition(board);
+                        console.log("Board: " + board);
 
                         setGameResultByNumber(result);
 
@@ -545,8 +539,16 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                                 );
                             }
 
+                            setChessPosition(board);
+
                             return;
                         }
+
+                        console.log("load board");
+
+                        loadBoard(board);
+
+                        setChessPosition(board);
 
                         chessGame.setTurn(type === 1 ? "b" : "w");
 

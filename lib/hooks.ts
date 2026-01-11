@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { GameResult } from "./types";
 
 export function useChessClock(
     whiteTime: number,
@@ -6,7 +7,8 @@ export function useChessClock(
     turn: "w" | "b",
     serverTimestamp: number | null,
     serverTimeOffset: number | null,
-    matchId: string
+    matchId: string,
+    gameResult: GameResult | null
 ) {
     const [display, setDisplay] = useState({
         white: 0,
@@ -31,6 +33,15 @@ export function useChessClock(
         //     .getItem(`${matchId}:time`)
         //     ?.split(":")
         //     .map((t) => parseInt(t)) || [whiteTime, blackTime];
+
+        if (gameResult && gameResult !== "none") {
+            setDisplay({
+                white: whiteTime,
+                black: blackTime,
+            });
+
+            return;
+        }
 
         let storedWhiteTime = whiteTime;
         let storedBlackTime = blackTime;
@@ -84,7 +95,7 @@ export function useChessClock(
                 cancelAnimationFrame(animationFrameIdRef.current);
             }
         };
-    }, [serverTimeOffset]);
+    }, [gameResult, serverTimeOffset]);
 
     return { display, animationFrameIdRef };
 }
