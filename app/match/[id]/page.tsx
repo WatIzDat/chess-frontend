@@ -302,6 +302,8 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         "white" | "black" | "spectator" | null
     >(null);
 
+    // const [winner, setWinner] = useState<Color | null>(null);
+
     const [gameResult, setGameResult] = useState<GameResult | null>(null);
 
     const { id: matchId } = use(params);
@@ -346,7 +348,22 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         );
     };
 
-    const getResultMessage = (result: GameResult | null) => {
+    // const [resultMessage, setResultMessage] = useState<React.ReactNode | null>(
+    //     null
+    // );
+
+    // useEffect(() => {
+    //     setResultMessage(getResultMessage());
+    // }, [playerType, gameTurn]);
+
+    const getResultMessage = (
+        result: GameResult | null,
+        playerType: "white" | "black" | "spectator" | null,
+        gameTurn: Color
+    ) => {
+        console.log("get result message");
+        console.log(playerType);
+        console.log(gameTurn);
         switch (result) {
             case "none":
                 return;
@@ -391,32 +408,25 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         }
     };
 
-    const setGameResultByNumber = (result: number) => {
+    const getGameResultByNumber = (result: number): GameResult => {
         switch (result) {
             case 0:
-                setGameResult("none");
-                break;
+                return "none";
             case 1:
-                setGameResult("checkmate");
-                break;
+                return "checkmate";
             case 2:
-                setGameResult("stalemate");
-                break;
+                return "stalemate";
             case 3:
-                setGameResult("drawByRepetition");
-                break;
+                return "drawByRepetition";
             case 4:
-                setGameResult("drawByFiftyMoveRule");
-                break;
+                return "drawByFiftyMoveRule";
             case 5:
-                setGameResult("drawByInsufficientMaterial");
-                break;
+                return "drawByInsufficientMaterial";
             case 6:
-                setGameResult("flag");
-                break;
+                return "flag";
             default:
                 console.error("Invalid result");
-                break;
+                return "none";
         }
     };
 
@@ -480,6 +490,9 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         chessGame.load(board);
                     }
 
+                    console.log("load board");
+                    console.log(chessGame.turn());
+
                     setGameTurn(chessGame.turn());
                 };
 
@@ -513,7 +526,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
                         console.log("Board: " + board);
 
-                        setGameResultByNumber(result);
+                        setGameResult(getGameResultByNumber(result));
 
                         if (result !== 0) {
                             if (animationFrameIdRef.current) {
@@ -521,6 +534,8 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                                     animationFrameIdRef.current
                                 );
                             }
+
+                            loadBoard(board);
 
                             setChessPosition(board);
 
@@ -530,6 +545,16 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         console.log("load board");
 
                         loadBoard(board);
+
+                        // const resultStr = getGameResultByNumber(result);
+
+                        // if (resultStr === "checkmate" || resultStr === "flag") {
+                        //     if (chessGame.turn() === "w") {
+                        //         if (type === 0) {
+                        //             setGameResult("");
+                        //         }
+                        //     }
+                        // }
 
                         setChessPosition(board);
 
@@ -581,7 +606,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
                         setChessPosition(board);
 
-                        setGameResultByNumber(result);
+                        setGameResult(getGameResultByNumber(result));
 
                         if (result !== 0) {
                             if (animationFrameIdRef.current) {
@@ -674,7 +699,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         >
             {() => (
                 <div className="w-full h-screen flex flex-col items-center justify-center gap-4">
-                    {getResultMessage(gameResult)}
+                    {getResultMessage(gameResult, playerType, gameTurn)}
                     <div className="text-5xl font-bold">
                         {playerType === "white"
                             ? formatTimeMs(display.black)

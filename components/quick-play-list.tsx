@@ -11,7 +11,7 @@ export default function QuickPlayList() {
 
     return (
         <SignalRConnection
-            connectionProvider={() => {
+            connectionProvider={async () => {
                 const connection = new HubConnectionBuilder()
                     .configureLogging(LogLevel.Debug)
                     .withUrl("http://localhost:5075/hubs/matchmaking", {
@@ -38,7 +38,7 @@ export default function QuickPlayList() {
             {() => (
                 <div className="grid grid-cols-3 grid-rows-2 size-1/3 gap-8">
                     {[
-                        [15, 10],
+                        [1, 0],
                         [30, 0],
                         [60, 0],
                         [30, 10],
