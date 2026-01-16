@@ -334,74 +334,57 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         };
     }, [display]);
 
+    const resultHeader = (
+        headingChildren: React.ReactNode,
+        subheadingChildren: React.ReactNode
+    ) => {
+        return (
+            <header>
+                <h1 className="text-6xl text-center mb-4">{headingChildren}</h1>
+                <p className="text-2xl">{subheadingChildren}</p>
+            </header>
+        );
+    };
+
     const getResultMessage = (result: GameResult | null) => {
         switch (result) {
             case "none":
                 return;
             case "checkmate":
-                return (
-                    <header>
-                        <h1>
-                            {playerType ===
-                            (gameTurn === "w" ? "white" : "black")
-                                ? "You lose!"
-                                : "You win!"}
-                        </h1>
-                        <p>
-                            {playerType ===
-                            (gameTurn === "w" ? "white" : "black")
-                                ? "Your opponent checkmated you, but you still played a great game. Congrats!"
-                                : "You successfully checkmated your opponent. Congrats!"}
-                        </p>
-                    </header>
+                return resultHeader(
+                    playerType === (gameTurn === "w" ? "white" : "black")
+                        ? "You lose!"
+                        : "You win!",
+                    playerType === (gameTurn === "w" ? "white" : "black")
+                        ? "Your opponent checkmated you, but you still played a great game. Congrats!"
+                        : "You successfully checkmated your opponent. Congrats!"
                 );
             case "stalemate":
-                return (
-                    <header>
-                        <h1>Draw!</h1>
-                        <p>The game is drawn by stalemate. Good game!</p>
-                    </header>
+                return resultHeader(
+                    "Draw!",
+                    "The game is drawn by stalemate. Good game!"
                 );
             case "drawByRepetition":
-                return (
-                    <header>
-                        <h1>Draw!</h1>
-                        <p>The game is drawn by repetition. Good game!</p>
-                    </header>
+                return resultHeader(
+                    "Draw!",
+                    "The game is drawn by repetition. Good game!"
                 );
             case "drawByFiftyMoveRule":
-                return (
-                    <header>
-                        <h1>Draw!</h1>
-                        <p>
-                            The game is drawn by the fifty move rule. Good game!
-                        </p>
-                    </header>
+                return resultHeader(
+                    "Draw!",
+                    "The game is drawn by the fifty move rule. Good game!"
                 );
             case "drawByInsufficientMaterial":
-                return (
-                    <header>
-                        <h1>Draw!</h1>
-                        <p>
-                            The game is drawn by insufficient material. Good
-                            game!
-                        </p>
-                    </header>
+                return resultHeader(
+                    "Draw!",
+                    "The game is drawn by insufficient material. Good game!"
                 );
             case "flag":
-                return (
-                    <header>
-                        <h1>
-                            {chessGame.turn() === gameTurn
-                                ? "You lose!"
-                                : "You win!"}
-                        </h1>
-                        <p>
-                            {chessGame.turn() === gameTurn
-                                ? "You lost on time, but you still played a great game. Congrats!"
-                                : "You won on time. Congrats!"}
-                        </p>
-                    </header>
+                return resultHeader(
+                    chessGame.turn() === gameTurn ? "You lose!" : "You win!",
+                    chessGame.turn() === gameTurn
+                        ? "You lost on time, but you still played a great game. Congrats!"
+                        : "You won on time. Congrats!"
                 );
             default:
                 break;
@@ -690,19 +673,19 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
             }}
         >
             {() => (
-                <div className="w-full flex flex-col items-center justify-center">
+                <div className="w-full h-screen flex flex-col items-center justify-center gap-4">
                     {getResultMessage(gameResult)}
-                    <div>
+                    <div className="text-5xl font-bold">
                         {playerType === "white"
                             ? formatTimeMs(display.black)
                             : formatTimeMs(display.white)}
                     </div>
                     {/* <div className="p-12 w-1/2 flex flex-col items-center justify-center"> */}
-                    <div className="max-w-[70vh] h-full">
+                    <div className="max-w-[70vh]">
                         <Chessboard options={chessboardOptions} />
                     </div>
                     {/* </div> */}
-                    <div>
+                    <div className="text-5xl font-bold">
                         {playerType === "white"
                             ? formatTimeMs(display.white)
                             : formatTimeMs(display.black)}
