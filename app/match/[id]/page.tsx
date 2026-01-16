@@ -398,8 +398,10 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                 );
             case "flag":
                 return resultHeader(
-                    chessGame.turn() === gameTurn ? "You lose!" : "You win!",
-                    chessGame.turn() === gameTurn
+                    (playerType === "black" ? "b" : "w") === gameTurn
+                        ? "You lose!"
+                        : "You win!",
+                    (playerType === "black" ? "b" : "w") === gameTurn
                         ? "You lost on time, but you still played a great game. Congrats!"
                         : "You won on time. Congrats!"
                 );
