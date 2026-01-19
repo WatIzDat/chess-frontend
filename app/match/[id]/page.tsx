@@ -308,14 +308,15 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
     const { id: matchId } = use(params);
 
-    const { display, animationFrameIdRef } = useChessClock(
+    let clock = useChessClock(
         whiteTime,
         blackTime,
         gameTurn,
         serverTimestamp,
         serverTimeOffset,
         matchId,
-        gameResult
+        gameResult,
+        connection
     );
 
     // useEffect(() => {
@@ -324,9 +325,15 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
     useEffect(() => {
         function beforeUnload(e: BeforeUnloadEvent) {
-            localStorage.setItem(`${matchId}:whiteTime`, `${display.white}`);
+            localStorage.setItem(
+                `${matchId}:whiteTime`,
+                `${clock.display.white}`
+            );
 
-            localStorage.setItem(`${matchId}:blackTime`, `${display.black}`);
+            localStorage.setItem(
+                `${matchId}:blackTime`,
+                `${clock.display.black}`
+            );
         }
 
         window.addEventListener("beforeunload", beforeUnload);
@@ -334,7 +341,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         return () => {
             window.removeEventListener("beforeunload", beforeUnload);
         };
-    }, [display]);
+    }, [clock.display]);
 
     const resultHeader = (
         headingChildren: React.ReactNode,
@@ -442,6 +449,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                     onSquareClick: onSquareClick(conn),
                     boardOrientation: "white",
                 });
+
                 setConnection(conn);
             }}
             connectionProvider={async () => {
@@ -531,9 +539,9 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         setGameResult(getGameResultByNumber(result));
 
                         if (result !== 0) {
-                            if (animationFrameIdRef.current) {
+                            if (clock.animationFrameIdRef.current) {
                                 cancelAnimationFrame(
-                                    animationFrameIdRef.current
+                                    clock.animationFrameIdRef.current
                                 );
                             }
 
@@ -576,6 +584,24 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                     }
                 );
 
+                connection.on("ReceiveFlag", (player: number) => {
+                    if (player === 0) {
+                        setWhiteTime(0);
+
+                        localStorage.setItem(`${matchId}:whiteTime`, `${0}`);
+                    } else {
+                        setBlackTime(0);
+
+                        localStorage.setItem(`${matchId}:blackTime`, `${0}`);
+                    }
+
+                    setGameResult("flag");
+
+                    if (clock.animationFrameIdRef.current) {
+                        cancelAnimationFrame(clock.animationFrameIdRef.current);
+                    }
+                });
+
                 connection.on(
                     "ReceiveMove",
                     (
@@ -585,6 +611,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         newServerTimestamp: number
                     ) => {
                         console.log("move received");
+                        console.log(timeRemaining);
 
                         loadBoard(board);
 
@@ -611,9 +638,9 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         setGameResult(getGameResultByNumber(result));
 
                         if (result !== 0) {
-                            if (animationFrameIdRef.current) {
+                            if (clock.animationFrameIdRef.current) {
                                 cancelAnimationFrame(
-                                    animationFrameIdRef.current
+                                    clock.animationFrameIdRef.current
                                 );
                             }
 
@@ -704,8 +731,8 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                     {getResultMessage(gameResult, playerType, gameTurn)}
                     <div className="text-5xl font-bold">
                         {playerType === "white"
-                            ? formatTimeMs(display.black)
-                            : formatTimeMs(display.white)}
+                            ? formatTimeMs(clock.display.black)
+                            : formatTimeMs(clock.display.white)}
                     </div>
                     {/* <div className="p-12 w-1/2 flex flex-col items-center justify-center"> */}
                     <div className="max-w-[70vh]">
@@ -714,8 +741,8 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                     {/* </div> */}
                     <div className="text-5xl font-bold">
                         {playerType === "white"
-                            ? formatTimeMs(display.white)
-                            : formatTimeMs(display.black)}
+                            ? formatTimeMs(clock.display.white)
+                            : formatTimeMs(clock.display.black)}
                     </div>
                 </div>
             )}

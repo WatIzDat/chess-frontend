@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { GameResult } from "./types";
+import { HubConnection } from "@microsoft/signalr";
 
 export function useChessClock(
     whiteTime: number,
@@ -8,7 +9,8 @@ export function useChessClock(
     serverTimestamp: number | null,
     serverTimeOffset: number | null,
     matchId: string,
-    gameResult: GameResult | null
+    gameResult: GameResult | null,
+    signalRConnection: HubConnection | null
 ) {
     const [display, setDisplay] = useState({
         white: 0,
@@ -80,6 +82,10 @@ export function useChessClock(
                 blackTimeRemaining -= elapsedTime;
             }
 
+            if (whiteTimeRemaining <= 0 || blackTimeRemaining <= 0) {
+                signalRConnection?.invoke("SendTimeUpdate", matchId);
+            }
+
             setDisplay({
                 white: whiteTimeRemaining,
                 black: blackTimeRemaining,
@@ -95,7 +101,7 @@ export function useChessClock(
                 cancelAnimationFrame(animationFrameIdRef.current);
             }
         };
-    }, [gameResult, serverTimeOffset]);
+    }, [gameResult, serverTimeOffset, signalRConnection]);
 
     return { display, animationFrameIdRef };
 }

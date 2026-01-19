@@ -38,7 +38,7 @@ export default function QuickPlayList() {
             {() => (
                 <div className="grid grid-cols-3 grid-rows-2 size-1/3 gap-8">
                     {[
-                        [1, 0],
+                        [0.1, 0],
                         [30, 0],
                         [60, 0],
                         [30, 10],
