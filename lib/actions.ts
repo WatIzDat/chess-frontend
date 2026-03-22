@@ -7,6 +7,47 @@ const Login = z.object({
     password: z.string(),
 });
 
+export async function register(prevState: any, formData: FormData) {
+    const validation = Login.safeParse({
+        email: formData.get("email"),
+        password: formData.get("password"),
+    });
+
+    if (!validation.success) {
+        return {
+            success: false,
+            message: validation.error.issues[0].message + ".",
+        };
+    }
+
+    const registerRes = await fetch(
+        `${process.env.NEXT_PUBLIC_CHESS_SERVER_URL}/register`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                email: validation.data.email,
+                password: validation.data.password,
+            }),
+        },
+    );
+
+    if (!registerRes.ok) {
+        console.log(registerRes.status);
+        return {
+            success: false,
+            message:
+                registerRes.status === 401
+                    ? "Email or password was incorrect."
+                    : "Login failed.",
+        };
+    }
+
+    return { success: true, data: null };
+}
+
 export async function logIn(prevState: any, formData: FormData) {
     const validation = Login.safeParse({
         email: formData.get("email"),

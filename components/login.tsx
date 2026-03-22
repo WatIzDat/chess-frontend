@@ -1,34 +1,54 @@
 "use client";
 
-import { logIn } from "@/lib/actions";
+import { logIn, register } from "@/lib/actions";
 import { DateTime } from "luxon";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect } from "react";
 
-export default function Login() {
-    const [state, formAction, pending] = useActionState(logIn, {
-        success: false,
-        message: "",
-    });
+export default function Login({ type }: { type: "login" | "register" }) {
+    const [state, formAction, pending] = useActionState(
+        type === "login" ? logIn : register,
+        {
+            success: false,
+            message: "",
+        },
+    );
+
+    const router = useRouter();
 
     useEffect(() => {
         if (state?.success) {
-            localStorage.setItem("accessToken", state.data.accessToken);
-            localStorage.setItem("refreshToken", state.data.refreshToken);
-            localStorage.setItem(
-                "tokenExpirationDate",
-                DateTime.utc()
-                    .plus({ seconds: state.data.expiresIn })
-                    .toMillis()
-                    .toString()
-            );
-            window.location.reload();
+            if (type === "login") {
+                localStorage.setItem("accessToken", state.data.accessToken);
+                localStorage.setItem("refreshToken", state.data.refreshToken);
+                localStorage.setItem(
+                    "tokenExpirationDate",
+                    DateTime.utc()
+                        .plus({ seconds: state.data.expiresIn })
+                        .toMillis()
+                        .toString(),
+                );
+                window.location.reload();
+            } else {
+                router.push("/");
+            }
         }
     }, [state]);
 
     return (
         <>
-            <h1 className="text-9xl font-black">Login</h1>
+            <h1 className="text-9xl font-black">
+                {type === "login" ? "Login" : "Register"}
+            </h1>
+            <p className="text-4xl">
+                or{" "}
+                {type === "login" ? (
+                    <Link href="/register">Register</Link>
+                ) : (
+                    <Link href="/">Log In</Link>
+                )}
+            </p>
             <form
                 className="grid grid-cols-2 text-4xl gap-8"
                 action={formAction}
@@ -61,7 +81,7 @@ export default function Login() {
                     type="submit"
                     disabled={pending}
                 >
-                    Log In
+                    {type === "login" ? "Log In" : "Register"}
                 </button>
             </form>
         </>
