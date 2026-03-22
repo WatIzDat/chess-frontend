@@ -1,6 +1,6 @@
 "use client";
 
-import { ChessServerURL, queueMatchmaking } from "@/lib/actions";
+import { queueMatchmaking } from "@/lib/actions";
 import { getAccessToken } from "@/lib/util";
 import SignalRConnection from "./signalr-connection";
 import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
@@ -14,22 +14,25 @@ export default function QuickPlayList() {
             connectionProvider={async () => {
                 const connection = new HubConnectionBuilder()
                     .configureLogging(LogLevel.Debug)
-                    .withUrl(`${ChessServerURL}/hubs/matchmaking`, {
-                        accessTokenFactory: getAccessToken,
-                        withCredentials: true,
-                    })
+                    .withUrl(
+                        `${process.env.NEXT_PUBLIC_CHESS_SERVER_URL}/hubs/matchmaking`,
+                        {
+                            accessTokenFactory: getAccessToken,
+                            withCredentials: true,
+                        },
+                    )
                     .withAutomaticReconnect()
                     .build();
 
                 connection.on("MatchFound", (matchId) =>
-                    router.push(`/match/${matchId}`)
+                    router.push(`/match/${matchId}`),
                 );
 
                 connection
                     .start()
                     .then(() => console.log("Connected to SignalR"))
                     .catch((err) =>
-                        console.error("SignalR connection error:", err)
+                        console.error("SignalR connection error:", err),
                     );
 
                 return connection;
@@ -52,7 +55,7 @@ export default function QuickPlayList() {
                                 queueMatchmaking(
                                     await getAccessToken(),
                                     timeControl[0] * 60,
-                                    timeControl[1]
+                                    timeControl[1],
                                 )
                             }
                         >

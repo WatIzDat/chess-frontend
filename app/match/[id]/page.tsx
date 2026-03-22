@@ -1,7 +1,6 @@
 "use client";
 
 import SignalRConnection from "@/components/signalr-connection";
-import { ChessServerURL } from "@/lib/actions";
 import { useChessClock } from "@/lib/hooks";
 import { GameResult } from "@/lib/types";
 import { formatTimeMs, getAccessToken } from "@/lib/util";
@@ -119,7 +118,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                 verbose: true,
             });
             const foundMove = moves.find(
-                (m) => m.from === moveFrom && m.to === square
+                (m) => m.from === moveFrom && m.to === square,
             );
 
             // not a valid move
@@ -198,7 +197,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                 conn?.invoke(
                     "SendMove",
                     `${sourceSquare}${targetSquare}`,
-                    matchId
+                    matchId,
                 );
 
                 // make random cpu move after a short delay
@@ -240,7 +239,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
     const [serverTimestamp, setServerTimestamp] = useState<number | null>(null);
     const [serverTimeOffset, setServerTimeOffset] = useState<number | null>(
-        null
+        null,
     );
 
     // const [playerColor, setPlayerColor] = useState<Color>("w");
@@ -317,7 +316,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         serverTimeOffset,
         matchId,
         gameResult,
-        connection
+        connection,
     );
 
     // useEffect(() => {
@@ -328,12 +327,12 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
         function beforeUnload(e: BeforeUnloadEvent) {
             localStorage.setItem(
                 `${matchId}:whiteTime`,
-                `${clock.display.white}`
+                `${clock.display.white}`,
             );
 
             localStorage.setItem(
                 `${matchId}:blackTime`,
-                `${clock.display.black}`
+                `${clock.display.black}`,
             );
         }
 
@@ -346,7 +345,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
     const resultHeader = (
         headingChildren: React.ReactNode,
-        subheadingChildren: React.ReactNode
+        subheadingChildren: React.ReactNode,
     ) => {
         return (
             <header>
@@ -367,7 +366,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
     const getResultMessage = (
         result: GameResult | null,
         playerType: "white" | "black" | "spectator" | null,
-        gameTurn: Color
+        gameTurn: Color,
     ) => {
         console.log("get result message");
         console.log(playerType);
@@ -382,27 +381,27 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         : "You win!",
                     playerType === (gameTurn === "w" ? "white" : "black")
                         ? "Your opponent checkmated you, but you still played a great game. Congrats!"
-                        : "You successfully checkmated your opponent. Congrats!"
+                        : "You successfully checkmated your opponent. Congrats!",
                 );
             case "stalemate":
                 return resultHeader(
                     "Draw!",
-                    "The game is drawn by stalemate. Good game!"
+                    "The game is drawn by stalemate. Good game!",
                 );
             case "drawByRepetition":
                 return resultHeader(
                     "Draw!",
-                    "The game is drawn by repetition. Good game!"
+                    "The game is drawn by repetition. Good game!",
                 );
             case "drawByFiftyMoveRule":
                 return resultHeader(
                     "Draw!",
-                    "The game is drawn by the fifty move rule. Good game!"
+                    "The game is drawn by the fifty move rule. Good game!",
                 );
             case "drawByInsufficientMaterial":
                 return resultHeader(
                     "Draw!",
-                    "The game is drawn by insufficient material. Good game!"
+                    "The game is drawn by insufficient material. Good game!",
                 );
             case "flag":
                 return resultHeader(
@@ -411,7 +410,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         : "You win!",
                     (playerType === "black" ? "b" : "w") === gameTurn
                         ? "You lost on time, but you still played a great game. Congrats!"
-                        : "You won on time. Congrats!"
+                        : "You won on time. Congrats!",
                 );
             default:
                 break;
@@ -455,12 +454,12 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
             }}
             connectionProvider={async () => {
                 const response = await fetch(
-                    `${ChessServerURL}/match/${matchId}`,
+                    `${process.env.NEXT_PUBLIC_CHESS_SERVER_URL}/match/${matchId}`,
                     {
                         headers: {
                             Authorization: `Bearer ${await getAccessToken()}`,
                         },
-                    }
+                    },
                 );
 
                 if (!response.ok) {
@@ -481,9 +480,12 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
                 const connection = new HubConnectionBuilder()
                     .configureLogging(LogLevel.Debug)
-                    .withUrl(`${ChessServerURL}/hubs/game`, {
-                        accessTokenFactory: getAccessToken,
-                    })
+                    .withUrl(
+                        `${process.env.NEXT_PUBLIC_CHESS_SERVER_URL}/hubs/game`,
+                        {
+                            accessTokenFactory: getAccessToken,
+                        },
+                    )
                     .withAutomaticReconnect()
                     .build();
 
@@ -515,7 +517,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         blackTimeRemaining: number,
                         board: string,
                         result: number,
-                        newServerTimestamp: number
+                        newServerTimestamp: number,
                     ) => {
                         // console.log("Black time: " + blackTimeRemaining);
                         setWhiteTime(whiteTimeRemaining);
@@ -524,14 +526,14 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         if (!localStorage.getItem(`${matchId}:whiteTime`)) {
                             localStorage.setItem(
                                 `${matchId}:whiteTime`,
-                                `${whiteTimeRemaining}`
+                                `${whiteTimeRemaining}`,
                             );
                         }
 
                         if (!localStorage.getItem(`${matchId}:blackTime`)) {
                             localStorage.setItem(
                                 `${matchId}:blackTime`,
-                                `${blackTimeRemaining}`
+                                `${blackTimeRemaining}`,
                             );
                         }
 
@@ -542,7 +544,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         if (result !== 0) {
                             if (clock.animationFrameIdRef.current) {
                                 cancelAnimationFrame(
-                                    clock.animationFrameIdRef.current
+                                    clock.animationFrameIdRef.current,
                                 );
                             }
 
@@ -579,10 +581,10 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
                             const clientReceiveTime: number = performance.now();
                             setServerTimeOffset(
-                                newServerTimestamp - clientReceiveTime
+                                newServerTimestamp - clientReceiveTime,
                             );
                         }
-                    }
+                    },
                 );
 
                 connection.on("ReceiveFlag", (player: number) => {
@@ -609,7 +611,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         board: string,
                         result: number,
                         timeRemaining: number,
-                        newServerTimestamp: number
+                        newServerTimestamp: number,
                     ) => {
                         console.log("move received");
                         console.log(timeRemaining);
@@ -621,14 +623,14 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
                             localStorage.setItem(
                                 `${matchId}:blackTime`,
-                                `${timeRemaining}`
+                                `${timeRemaining}`,
                             );
                         } else {
                             setWhiteTime(timeRemaining);
 
                             localStorage.setItem(
                                 `${matchId}:whiteTime`,
-                                `${timeRemaining}`
+                                `${timeRemaining}`,
                             );
                         }
 
@@ -641,7 +643,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                         if (result !== 0) {
                             if (clock.animationFrameIdRef.current) {
                                 cancelAnimationFrame(
-                                    clock.animationFrameIdRef.current
+                                    clock.animationFrameIdRef.current,
                                 );
                             }
 
@@ -654,9 +656,9 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
                         const clientReceiveTime: number = performance.now();
                         setServerTimeOffset(
-                            newServerTimestamp - clientReceiveTime
+                            newServerTimestamp - clientReceiveTime,
                         );
-                    }
+                    },
                 );
 
                 const onConnected = async () => {
@@ -715,7 +717,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
                     .start()
                     .then(onConnected)
                     .catch((err) =>
-                        console.error("SignalR connection error:", err)
+                        console.error("SignalR connection error:", err),
                     );
 
                 // setChessboardOptions({

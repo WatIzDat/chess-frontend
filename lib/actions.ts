@@ -7,8 +7,6 @@ const Login = z.object({
     password: z.string(),
 });
 
-export const ChessServerURL = process.env.CHESS_SERVER_URL;
-
 export async function logIn(prevState: any, formData: FormData) {
     const validation = Login.safeParse({
         email: formData.get("email"),
@@ -22,16 +20,19 @@ export async function logIn(prevState: any, formData: FormData) {
         };
     }
 
-    const loginRes = await fetch(`${ChessServerURL}/login`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
+    const loginRes = await fetch(
+        `${process.env.NEXT_PUBLIC_CHESS_SERVER_URL}/login`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                email: validation.data.email,
+                password: validation.data.password,
+            }),
         },
-        body: JSON.stringify({
-            email: validation.data.email,
-            password: validation.data.password,
-        }),
-    });
+    );
 
     if (!loginRes.ok) {
         console.log(loginRes.status);
@@ -53,7 +54,7 @@ export async function queueMatchmaking(
     accessToken: string,
     initialTimeSeconds: number,
     incrementTimeSeconds: number,
-    useDelay?: boolean
+    useDelay?: boolean,
 ) {
     // const connection = new signalR.HubConnectionBuilder()
     //     .withUrl("http://localhost:5075/matchmakingHub", {
@@ -64,18 +65,21 @@ export async function queueMatchmaking(
 
     // connection.on("MatchFound", (matchId) => redirect(`/match/${matchId}`));
 
-    const response = await fetch(`${ChessServerURL}/queue`, {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
+    const response = await fetch(
+        `${process.env.NEXT_PUBLIC_CHESS_SERVER_URL}/queue`,
+        {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                InitialTimeSeconds: initialTimeSeconds,
+                IncrementTimeSeconds: incrementTimeSeconds,
+                UseDelay: useDelay,
+            }),
         },
-        body: JSON.stringify({
-            InitialTimeSeconds: initialTimeSeconds,
-            IncrementTimeSeconds: incrementTimeSeconds,
-            UseDelay: useDelay,
-        }),
-    });
+    );
 
     if (!response.ok) {
         return {
