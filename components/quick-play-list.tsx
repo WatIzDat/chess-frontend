@@ -1,6 +1,6 @@
 "use client";
 
-import { queueMatchmaking } from "@/lib/actions";
+import { ChessServerURL, queueMatchmaking } from "@/lib/actions";
 import { getAccessToken } from "@/lib/util";
 import SignalRConnection from "./signalr-connection";
 import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
@@ -14,7 +14,7 @@ export default function QuickPlayList() {
             connectionProvider={async () => {
                 const connection = new HubConnectionBuilder()
                     .configureLogging(LogLevel.Debug)
-                    .withUrl("http://localhost:5075/hubs/matchmaking", {
+                    .withUrl(`${ChessServerURL}/hubs/matchmaking`, {
                         accessTokenFactory: getAccessToken,
                         withCredentials: true,
                     })

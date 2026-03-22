@@ -7,6 +7,8 @@ const Login = z.object({
     password: z.string(),
 });
 
+export const ChessServerURL = process.env.CHESS_SERVER_URL;
+
 export async function logIn(prevState: any, formData: FormData) {
     const validation = Login.safeParse({
         email: formData.get("email"),
@@ -20,7 +22,7 @@ export async function logIn(prevState: any, formData: FormData) {
         };
     }
 
-    const loginRes = await fetch("http://localhost:5075/login", {
+    const loginRes = await fetch(`${ChessServerURL}/login`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -62,7 +64,7 @@ export async function queueMatchmaking(
 
     // connection.on("MatchFound", (matchId) => redirect(`/match/${matchId}`));
 
-    const response = await fetch("http://localhost:5075/queue", {
+    const response = await fetch(`${ChessServerURL}/queue`, {
         method: "POST",
         headers: {
             Authorization: `Bearer ${accessToken}`,

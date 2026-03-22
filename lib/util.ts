@@ -1,4 +1,5 @@
 import { DateTime, Duration } from "luxon";
+import { ChessServerURL } from "./actions";
 
 export async function getAccessToken() {
     const expirationMillis: string | null = localStorage.getItem(
@@ -17,7 +18,7 @@ export async function getAccessToken() {
         return localStorage.getItem("accessToken");
     }
 
-    const response = await fetch("http://localhost:5075/refresh", {
+    const response = await fetch(`${ChessServerURL}/refresh`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

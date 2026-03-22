@@ -1,6 +1,7 @@
 "use client";
 
 import SignalRConnection from "@/components/signalr-connection";
+import { ChessServerURL } from "@/lib/actions";
 import { useChessClock } from "@/lib/hooks";
 import { GameResult } from "@/lib/types";
 import { formatTimeMs, getAccessToken } from "@/lib/util";
@@ -454,7 +455,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
             }}
             connectionProvider={async () => {
                 const response = await fetch(
-                    `http://localhost:5075/match/${matchId}`,
+                    `${ChessServerURL}/match/${matchId}`,
                     {
                         headers: {
                             Authorization: `Bearer ${await getAccessToken()}`,
@@ -480,7 +481,7 @@ export default function Match({ params }: { params: Promise<{ id: string }> }) {
 
                 const connection = new HubConnectionBuilder()
                     .configureLogging(LogLevel.Debug)
-                    .withUrl("http://localhost:5075/hubs/game", {
+                    .withUrl(`${ChessServerURL}/hubs/game`, {
                         accessTokenFactory: getAccessToken,
                     })
                     .withAutomaticReconnect()
